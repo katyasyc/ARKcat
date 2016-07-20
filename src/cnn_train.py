@@ -27,12 +27,26 @@ def main(params, train_X, train_Y, key_array, model_dir):
     with tf.Graph().as_default():
         with open(cnn_dir + 'train_log', 'a') as timelog:
             timelog.write('\n\n\nNew Model:')
-
+            for example in train_X:
+                if np.count_nonzero(example) == 0:
+                    print 'error: zero entry'
+                else:
+                    # print 'maximum', np.amax(example)
+                    print 'shape', example.shape
             cnn = CNN(params, key_array)
             loss = cnn.cross_entropy
-            loss += tf.mul(tf.constant(params['REG_STRENGTH']), cnn.reg_loss)
+            if params['REG_STRENGTH'] is not None:
+                loss += cnn.cross_entropy + tf.mul(tf.constant(params['REG_STRENGTH']), cnn.reg_loss)
             #problem: thinks loss is None
-            print loss
+            # appears to be feeding empty data
+            # batches_x, batches_y = scramble_batches(params, train_X, train_Y)
+            # feed_dict = {cnn.input_x: batches_x[0], cnn.input_y: batches_y[0],
+            #              cnn.dropout: params['TRAIN_DROPOUT']}
+            # sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=1,
+            #                       intra_op_parallelism_threads=1, use_per_session_threads=True))
+            # print 'cross_entropy', cnn.cross_entropy.eval(session=sess)
+            # print 'h_pool', cnn.h_pool.eval(session=sess)
+            # print 'loss', loss
             train_step = cnn.optimizer.minimize(loss)
             sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=1,
                                   intra_op_parallelism_threads=1, use_per_session_threads=True))
@@ -52,7 +66,33 @@ def main(params, train_X, train_Y, key_array, model_dir):
                     train_step.run(feed_dict=feed_dict, session=sess)
                     #apply l2 clipping to weights and biases
                     if params['REGULARIZER'] == 'l2_clip':
-                        cnn.clip_vars(params)
+                        if j == len(batches_x):
+                            print 'debug clip_vars'
+                            check_weights = cnn.weights[0].eval(session=sess)
+                            check_biases = cnn.biases[0].eval(session=sess)
+                            check_Wfc = cnn.W_fc.eval(session=sess)
+                            check_bfc = cnn.b_fc.eval(session=sess)
+                            cnn.clip_vars(params)
+                            weights_2 = cnn.weights[0].eval(session=sess)
+                            biases_2 = cnn.biases[0].eval(session=sess)
+                            Wfc_2 = cnn.W_fc.eval(session=sess)
+                            bfc_2 = cnn.b_fc.eval(session=sess)
+                            if np.array_equal(check_weights, weights_2):
+                                print 'clipped'
+                            elif np.array_equal(check_biases, biases_2):
+                                print 'clipped'
+                            elif np.array_equal(check_Wfc, Wfc_2):
+                                print 'clipped'
+                            elif np.array_equal(check_bfc, bfc_2):
+                                print 'clipped'
+                            else:
+                                print 'no clip. means:'
+                            print tf.nn.l2_loss(cnn.weights[0]).eval(session=sess)
+                            print tf.nn.l2_loss(cnn.biases[0]).eval(session=sess)
+                            print tf.nn.l2_loss(cnn.W_fc).eval(session=sess)
+                            print tf.nn.l2_loss(cnn.b_fc).eval(session=sess)
+                        else:
+                            cnn.clip_vars(params)
                 timelog.write('\n\nepoch %i initial time %g' %(epoch, time.clock()))
                 timelog.write('\nCPU usage: %g'
                             %(resource.getrusage(resource.RUSAGE_SELF).ru_utime +

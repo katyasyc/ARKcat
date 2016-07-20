@@ -29,9 +29,10 @@ class Model_CNN:
         print 'fix later'
         self.params = {
                 # 'FILTERS' : self.hp['filters'],
-                'FILTERS' : 2,
+                'FILTERS' : 50,
                 'ACTIVATION_FN' : self.hp['activation_fn'],
-                'REGULARIZER' : self.hp['regularizer'],
+                #'REGULARIZER' : self.hp['regularizer'],
+                'REGULARIZER' : 'l2_clip',   
                 'REG_STRENGTH' : self.hp['reg_strength'],
                 'TRAIN_DROPOUT' : self.hp['dropout'],
                 'BATCH_SIZE' : self.hp['batch_size'],
@@ -46,12 +47,12 @@ class Model_CNN:
 
                 'WORD_VECTOR_LENGTH' : 300,
                 'CLASSES' : self.num_labels,
-                'EPOCHS' : 1,
+                'EPOCHS' : 5,
         }
         if self.params['REGULARIZER'] == 'l2':
             self.params['REG_STRENGTH'] = 10 ** self.params['REG_STRENGTH']
         # for i in range(self.hp['kernel_num']):
-        for i in range(1):
+        for i in range(2):
             self.params['KERNEL_SIZES'].append(self.hp['kernel_size'] + i * self.hp['kernel_increment'])
 
         self.vocab = get_vocab(self.indices_to_words)
